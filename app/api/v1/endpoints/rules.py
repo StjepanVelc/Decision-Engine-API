@@ -2,6 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -15,7 +16,13 @@ router = APIRouter(prefix="/rules", tags=["Rules"])
 async def create_rule(data: RuleCreate, db: AsyncSession = Depends(get_db)):
     """Create a new decision rule."""
     service = RuleService(db)
-    return await service.create_rule(data)
+    try:
+        return await service.create_rule(data)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"A rule with the name '{data.name}' already exists.",
+        )
 
 
 @router.get("/", response_model=List[RuleResponse])
@@ -43,7 +50,13 @@ async def get_rule(rule_id: UUID, db: AsyncSession = Depends(get_db)):
 async def update_rule(rule_id: UUID, data: RuleUpdate, db: AsyncSession = Depends(get_db)):
     """Partially update a rule."""
     service = RuleService(db)
-    rule = await service.update_rule(rule_id, data)
+    try:
+        rule = await service.update_rule(rule_id, data)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"A rule with the name '{data.name}' already exists.",
+        )
     if not rule:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rule not found")
     return rule
