@@ -1,8 +1,8 @@
 # Decision Engine API
 
-A **rule-based Decision Engine** REST API built with **FastAPI + PostgreSQL**, designed to evaluate arbitrary JSON payloads against configurable rules and return an audited `APPROVE / REVIEW / REJECT` decision.
+A **rule-based Decision Engine** built with **FastAPI + React**, designed to evaluate arbitrary JSON payloads against configurable rules and return an audited `APPROVE / REVIEW / REJECT` decision.
 
-> Portfolio project demonstrating 3-layer architecture, async Python, domain-driven design, audit logging, real-time statistics, and Docker containerization.
+> Portfolio project demonstrating 3-layer backend architecture, async Python, domain-driven design, audit logging, real-time statistics, a React + shadcn/ui frontend dashboard, and full Docker containerization — all served from a single container.
 
 ---
 
@@ -10,6 +10,10 @@ A **rule-based Decision Engine** REST API built with **FastAPI + PostgreSQL**, d
 
 ```
 ┌─────────────────────────────────────────┐
+│  Frontend (React + shadcn/ui)           │
+│  src/pages/ · src/components/           │
+│  TanStack Query · React Router          │
+├─────────────────────────────────────────┤
 │  Layer 1 – API (Presentation)           │
 │  app/api/v1/endpoints/                  │
 │  FastAPI routes, request/response       │
@@ -36,7 +40,8 @@ A **rule-based Decision Engine** REST API built with **FastAPI + PostgreSQL**, d
 - **Immutable audit log** – every create/update/delete on rules and every decision is written to a separate `audit_logs` table with event type, entity ID, and metadata
 - **Statistics endpoint** – real-time APPROVE / REVIEW / REJECT counts and success rate across all decisions
 - **Dot-notation field access** – evaluate nested JSON fields like `user.age`
-- **Docker ready** – multi-stage Dockerfile, Docker Compose with PostgreSQL, published image on Docker Hub
+- **React dashboard** – shadcn/ui interface for managing rules, browsing decisions, and evaluating payloads in real-time
+- **Docker ready** – multi-stage Dockerfile (Node + Python), Docker Compose with PostgreSQL, frontend and backend served from a single container on port 8000
 
 ---
 
@@ -44,7 +49,7 @@ A **rule-based Decision Engine** REST API built with **FastAPI + PostgreSQL**, d
 
 ### Option A — Docker (recommended)
 
-> No Python or PostgreSQL installation needed.
+> No Python, Node.js, or PostgreSQL installation needed.
 
 ```bash
 git clone <repo>
@@ -64,11 +69,17 @@ docker pull stipe35/decision-engine-api:latest
 docker compose up
 ```
 
-API docs available at: **http://localhost:8000/docs**
+| URL | Description |
+|-----|-------------|
+| **http://localhost:8000** | React frontend dashboard |
+| **http://localhost:8000/docs** | Swagger / OpenAPI UI |
+| **http://localhost:8000/api/v1/** | REST API root |
 
 ---
 
-### Option B — Local (Python + PostgreSQL)
+### Option B — Local development (frontend + backend separately)
+
+**Terminal 1 — Backend:**
 
 **Prerequisites:** Python 3.12+, PostgreSQL
 
@@ -93,12 +104,22 @@ Create the database:
 CREATE DATABASE decision_engine;
 ```
 
-Run the server:
+Run the backend:
 ```bash
 uvicorn app.main:app --reload
 ```
 
-API docs available at: **http://localhost:8000/docs**
+**Terminal 2 — Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+| URL | Description |
+|-----|-------------|
+| **http://localhost:5173** | React dev server (with HMR) |
+| **http://localhost:8000/docs** | Swagger UI |
 
 ---
 
@@ -249,6 +270,25 @@ All percentages are calculated server-side with a single aggregation query.
 
 ---
 
+## Frontend Dashboard
+
+The React dashboard is bundled into the Docker image and served automatically by FastAPI at **http://localhost:8000**.
+
+### Pages
+
+| Page | Description |
+|------|-------------|
+| **Dashboard** | Stats cards (total, approved, reviewed, rejected) + outcome bar chart + recent activity chart |
+| **Rules** | Table of all rules with create / edit (dialog) / delete. Supports all 10 operators and 3 actions. |
+| **Decisions** | History table of all evaluations. Click any row to open a detail side-sheet with triggered rules and reasons. |
+| **Evaluate** | Submit a JSON payload directly from the UI, see outcome, triggered rules, and reasons instantly. |
+
+### Tech
+
+Built with React 18 + TypeScript, **shadcn/ui** component library, Tailwind CSS v3, TanStack Query for server state, and Recharts for visualisations. The Vite dev proxy forwards all `/api/*` requests to the backend — no CORS config needed in development.
+
+---
+
 ## Tests
 
 ```bash
@@ -289,6 +329,11 @@ docker.io/stipe35/decision-engine-api:latest
 
 ### Build locally
 
+The Dockerfile uses a **3-stage multi-stage build**:
+1. **`frontend-builder`** (Node 20 Alpine) — runs `npm ci && npm run build`
+2. **`builder`** (Python 3.12 slim) — installs Python dependencies
+3. **`runtime`** (Python 3.12 slim) — copies both compiled assets into the final image
+
 ```bash
 docker build -t stipe35/decision-engine-api:latest .
 ```
@@ -326,3 +371,10 @@ Set `POSTGRES_PASSWORD` in your `.env` file (copied from `.env.example`).
 | Server | Uvicorn |
 | Containerization | Docker + Docker Compose |
 | Image Registry | Docker Hub (`stipe35/decision-engine-api`) |
+| Frontend Framework | React 18 + TypeScript |
+| UI Components | shadcn/ui + Tailwind CSS v3 |
+| State Management | TanStack Query (React Query) |
+| Forms | react-hook-form + Zod |
+| Charts | Recharts |
+| Routing | React Router v6 |
+| HTTP Client | Axios |

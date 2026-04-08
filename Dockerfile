@@ -1,4 +1,15 @@
-# ── Stage 1: builder ──────────────────────────────────────────────────────────
+# ── Stage 1: Frontend build ───────────────────────────────────────────────────
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /frontend
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
+# ── Stage 2: Python dependencies ─────────────────────────────────────────────
 FROM python:3.12-slim AS builder
 
 WORKDIR /app
@@ -10,7 +21,7 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# ── Stage 2: runtime ──────────────────────────────────────────────────────────
+# ── Stage 3: runtime ──────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
 
 WORKDIR /app
@@ -20,6 +31,9 @@ COPY --from=builder /install /usr/local
 
 # Copy application source
 COPY app/ ./app/
+
+# Copy built frontend
+COPY --from=frontend-builder /frontend/dist ./frontend/dist/
 
 # Non-root user for security
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser

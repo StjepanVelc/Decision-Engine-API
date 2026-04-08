@@ -18,3 +18,5 @@ README.md
 OPIS_PROJEKTA.txt
 docker-compose.yml
 *.md
+frontend/node_modules/
+frontend/dist/
