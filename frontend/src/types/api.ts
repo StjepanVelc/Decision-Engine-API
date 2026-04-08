@@ -3,11 +3,14 @@ export interface Rule {
     id: number;
     name: string;
     description: string | null;
-    field: string;
-    operator: RuleOperator;
-    value: string | number | boolean | string[] | number[];
+    expression: string | null;
+    field: string | null;
+    operator: RuleOperator | null;
+    value: string | number | boolean | string[] | number[] | null;
     action: RuleAction;
     priority: number;
+    weight: number;
+    hard_stop: boolean;
     is_active: boolean;
     category: string | null;
     created_at: string;
@@ -31,11 +34,13 @@ export type RuleAction = "APPROVE" | "REVIEW" | "REJECT";
 export interface RuleCreate {
     name: string;
     description?: string | null;
-    field: string;
-    operator: RuleOperator;
-    value: string | number | boolean | string[] | number[];
+    expression?: string | null;
+    field?: string | null;
+    operator?: RuleOperator | null;
+    value?: string | number | boolean | string[] | number[] | null;
     action: RuleAction;
     priority: number;
+    weight: number;
     is_active?: boolean;
     category?: string | null;
 }
@@ -49,6 +54,8 @@ export interface Decision {
     category: string | null;
     payload: Record<string, unknown>;
     outcome: RuleAction;
+    risk_score: number;
+    normalized_score: number;
     triggered_rules: TriggeredRule[];
     reasons: string[];
     rules_evaluated: number;
@@ -56,12 +63,12 @@ export interface Decision {
 }
 
 export interface TriggeredRule {
+    rule_id: string;
     rule_name: string;
     action: RuleAction;
-    field: string;
-    operator: RuleOperator;
-    value: unknown;
-    actual_value: unknown;
+    weight: number;
+    hard_stop: boolean;
+    match_detail: string;
 }
 
 export interface DecisionRequest {

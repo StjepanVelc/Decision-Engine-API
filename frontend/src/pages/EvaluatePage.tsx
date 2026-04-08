@@ -145,6 +145,8 @@ export default function EvaluatePage() {
                             <span>Decision ID: <strong className="text-foreground">{result.id}</strong></span>
                             <span>Rules evaluated: <strong className="text-foreground">{result.rules_evaluated}</strong></span>
                             <span>Triggered: <strong className="text-foreground">{result.triggered_rules.length}</strong></span>
+                            <span>Risk score: <strong className="text-foreground">{result.risk_score}</strong></span>
+                            <span>Normalized: <strong className="text-foreground">{result.normalized_score}%</strong></span>
                             <span>
                                 Reference:{" "}
                                 <strong className="text-foreground font-mono">
@@ -164,10 +166,15 @@ export default function EvaluatePage() {
                                                 <Badge variant="outline" className="ml-1 text-[10px]">
                                                     {tr.action}
                                                 </Badge>
+                                                <Badge variant="secondary" className="ml-1 text-[10px]">
+                                                    weight: {tr.weight}
+                                                </Badge>
+                                                {tr.hard_stop && (
+                                                    <Badge variant="destructive" className="ml-1 text-[10px]">hard stop</Badge>
+                                                )}
                                             </div>
                                             <div className="text-muted-foreground mt-0.5">
-                                                {tr.field} <code>{tr.operator}</code> {String(tr.value)}{" "}
-                                                · got <code>{String(tr.actual_value)}</code>
+                                                {tr.match_detail}
                                             </div>
                                         </li>
                                     ))}

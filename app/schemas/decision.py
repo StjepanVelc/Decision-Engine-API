@@ -33,6 +33,8 @@ class DecisionRequest(BaseModel):
 class DecisionResponse(BaseModel):
     id: UUID
     outcome: str
+    risk_score: int
+    normalized_score: int
     triggered_rules: List[Dict[str, Any]]
     reasons: List[str]
     rules_evaluated: int

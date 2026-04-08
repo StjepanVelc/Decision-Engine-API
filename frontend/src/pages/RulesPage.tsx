@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,6 +35,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
     SelectContent,
@@ -51,16 +52,28 @@ const OPERATORS: RuleOperator[] = [
 ];
 const ACTIONS: RuleAction[] = ["APPROVE", "REVIEW", "REJECT"];
 
-const ruleSchema = z.object({
-    name: z.string().min(1, "Name is required"),
-    field: z.string().min(1, "Field is required"),
-    operator: z.enum(OPERATORS as [RuleOperator, ...RuleOperator[]]),
-    value: z.string().min(1, "Value is required"),
-    action: z.enum(ACTIONS as [RuleAction, ...RuleAction[]]),
-    priority: z.number().int().min(0),
-    description: z.string().optional(),
-    category: z.string().optional(),
-});
+const ruleSchema = z
+    .object({
+        name: z.string().min(1, "Name is required"),
+        expression: z.string().optional(),
+        field: z.string().optional(),
+        operator: z.enum(OPERATORS as [RuleOperator, ...RuleOperator[]]).optional(),
+        value: z.string().optional(),
+        action: z.enum(ACTIONS as [RuleAction, ...RuleAction[]]),
+        priority: z.number().min(0),
+        weight: z.number().int().min(0).max(1000),
+        hard_stop: z.boolean(),
+        description: z.string().optional(),
+        category: z.string().optional(),
+    })
+    .refine(
+        (d) => {
+            const hasExpr = d.expression && d.expression.trim().length > 0;
+            const hasLegacy = d.field && d.field.trim().length > 0 && d.operator && d.value && d.value.trim().length > 0;
+            return hasExpr || hasLegacy;
+        },
+        { message: "Provide either an Expression or all three of Field, Operator, Value", path: ["expression"] }
+    );
 
 type RuleForm = z.infer<typeof ruleSchema>;
 
@@ -70,7 +83,8 @@ function actionBadge(action: RuleAction) {
     return <Badge variant={variants[action]}>{action}</Badge>;
 }
 
-function parseValue(raw: string, op: RuleOperator) {
+function parseValue(raw: string, op?: RuleOperator) {
+    if (!raw) return raw;
     if (op === "in" || op === "not_in") {
         return raw.split(",").map((s) => s.trim());
     }
@@ -92,14 +106,16 @@ export default function RulesPage() {
         resolver: zodResolver(ruleSchema),
         defaultValues: {
             priority: 0,
+            weight: 10,
             operator: "eq",
             action: "REVIEW",
+            hard_stop: false,
         },
     });
 
     function openCreate() {
         setEditing(null);
-        form.reset({ priority: 0, operator: "eq", action: "REVIEW" });
+        form.reset({ priority: 0, weight: 10, operator: "eq", action: "REVIEW", hard_stop: false });
         setOpen(true);
     }
 
@@ -107,13 +123,18 @@ export default function RulesPage() {
         setEditing(rule);
         form.reset({
             name: rule.name,
-            field: rule.field,
-            operator: rule.operator,
-            value: Array.isArray(rule.value)
-                ? rule.value.join(", ")
-                : String(rule.value),
+            expression: rule.expression ?? "",
+            field: rule.field ?? "",
+            operator: rule.operator ?? "eq",
+            value: rule.value != null
+                ? Array.isArray(rule.value)
+                    ? rule.value.join(", ")
+                    : String(rule.value)
+                : "",
             action: rule.action,
             priority: rule.priority,
+            weight: rule.weight,
+            hard_stop: rule.hard_stop,
             description: rule.description ?? "",
             category: rule.category ?? "",
         });
@@ -121,9 +142,22 @@ export default function RulesPage() {
     }
 
     async function onSubmit(data: RuleForm) {
+        const hasExpr = data.expression && data.expression.trim().length > 0;
         const payload = {
-            ...data,
-            value: parseValue(data.value, data.operator),
+            name: data.name,
+            description: data.description || undefined,
+            category: data.category || undefined,
+            action: data.action,
+            priority: data.priority,
+            weight: data.weight,
+            hard_stop: data.hard_stop,
+            ...(hasExpr
+                ? { expression: data.expression }
+                : {
+                    field: data.field,
+                    operator: data.operator,
+                    value: parseValue(data.value ?? "", data.operator),
+                }),
         };
         try {
             if (editing) {
@@ -166,19 +200,19 @@ export default function RulesPage() {
             </div>
 
             {isLoading ? (
-                <p className="text-muted-foreground">Loading…</p>
+                <p className="text-muted-foreground">Loadingâ€¦</p>
             ) : (
                 <div className="rounded-md border">
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Name</TableHead>
-                                <TableHead>Field</TableHead>
-                                <TableHead>Operator</TableHead>
-                                <TableHead>Value</TableHead>
+                                <TableHead>Condition</TableHead>
                                 <TableHead>Action</TableHead>
+                                <TableHead>Weight</TableHead>
                                 <TableHead>Priority</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Hard Stop</TableHead>
                                 <TableHead className="w-20" />
                             </TableRow>
                         </TableHeader>
@@ -186,7 +220,7 @@ export default function RulesPage() {
                             {rules.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={8}
+                                        colSpan={7}
                                         className="text-center text-muted-foreground py-10"
                                     >
                                         No rules yet. Create one to get started.
@@ -196,20 +230,17 @@ export default function RulesPage() {
                                 rules.map((rule) => (
                                     <TableRow key={rule.id}>
                                         <TableCell className="font-medium">{rule.name}</TableCell>
-                                        <TableCell className="font-mono text-xs">
-                                            {rule.field}
-                                        </TableCell>
-                                        <TableCell>
-                                            <code className="text-xs bg-muted px-1 py-0.5 rounded">
-                                                {rule.operator}
-                                            </code>
-                                        </TableCell>
-                                        <TableCell className="max-w-[120px] truncate text-sm">
-                                            {Array.isArray(rule.value)
-                                                ? rule.value.join(", ")
-                                                : String(rule.value)}
+                                        <TableCell className="font-mono text-xs max-w-[200px] truncate">
+                                            {rule.expression
+                                                ? <span title={rule.expression} className="italic text-muted-foreground">{rule.expression}</span>
+                                                : `${rule.field} ${rule.operator} ${Array.isArray(rule.value) ? rule.value.join(", ") : String(rule.value)}`}
                                         </TableCell>
                                         <TableCell>{actionBadge(rule.action)}</TableCell>
+                                        <TableCell>
+                                            <span className="font-mono text-xs bg-muted px-1 py-0.5 rounded">
+                                                {rule.weight}
+                                            </span>
+                                        </TableCell>
                                         <TableCell>{rule.priority}</TableCell>
                                         <TableCell>
                                             <Badge
@@ -217,6 +248,11 @@ export default function RulesPage() {
                                             >
                                                 {rule.is_active ? "Active" : "Inactive"}
                                             </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {rule.hard_stop && (
+                                                <Badge variant="destructive" className="text-[10px]">Hard Stop</Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex gap-1">
@@ -253,6 +289,7 @@ export default function RulesPage() {
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
+                                {/* Name */}
                                 <FormField
                                     control={form.control}
                                     name="name"
@@ -266,6 +303,33 @@ export default function RulesPage() {
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* DSL Expression */}
+                                <FormField
+                                    control={form.control}
+                                    name="expression"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel>
+                                                Expression{" "}
+                                                <span className="text-muted-foreground font-normal text-xs">
+                                                    (DSL â€” overrides Field/Operator/Value if set)
+                                                </span>
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder="amount > 10000 and country in ['NG', 'KP']"
+                                                    className="font-mono text-sm resize-none"
+                                                    rows={2}
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Legacy: Field */}
                                 <FormField
                                     control={form.control}
                                     name="field"
@@ -279,6 +343,8 @@ export default function RulesPage() {
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* Legacy: Operator */}
                                 <FormField
                                     control={form.control}
                                     name="operator"
@@ -307,6 +373,8 @@ export default function RulesPage() {
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* Legacy: Value */}
                                 <FormField
                                     control={form.control}
                                     name="value"
@@ -320,6 +388,8 @@ export default function RulesPage() {
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* Action */}
                                 <FormField
                                     control={form.control}
                                     name="action"
@@ -348,6 +418,36 @@ export default function RulesPage() {
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* Weight */}
+                                <FormField
+                                    control={form.control}
+                                    name="weight"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                Weight{" "}
+                                                <span className="text-muted-foreground font-normal text-xs">(0â€“1000)</span>
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={1000}
+                                                    {...field}
+                                                    onChange={(e) =>
+                                                        field.onChange(
+                                                            isNaN(e.target.valueAsNumber) ? 10 : e.target.valueAsNumber
+                                                        )
+                                                    }
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Priority */}
                                 <FormField
                                     control={form.control}
                                     name="priority"
@@ -372,6 +472,8 @@ export default function RulesPage() {
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* Category */}
                                 <FormField
                                     control={form.control}
                                     name="category"
@@ -385,6 +487,8 @@ export default function RulesPage() {
                                         </FormItem>
                                     )}
                                 />
+
+                                {/* Description */}
                                 <FormField
                                     control={form.control}
                                     name="description"
@@ -395,6 +499,31 @@ export default function RulesPage() {
                                                 <Input placeholder="Optional description" {...field} />
                                             </FormControl>
                                             <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Hard Stop */}
+                                <FormField
+                                    control={form.control}
+                                    name="hard_stop"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2 flex flex-row items-center gap-3">
+                                            <FormControl>
+                                                <input
+                                                    type="checkbox"
+                                                    title="Hard Stop"
+                                                    checked={field.value}
+                                                    onChange={(e) => field.onChange(e.target.checked)}
+                                                    className="h-4 w-4 cursor-pointer"
+                                                />
+                                            </FormControl>
+                                            <FormLabel className="!mt-0 cursor-pointer font-medium">
+                                                Hard Stop{" "}
+                                                <span className="text-muted-foreground font-normal text-xs">
+                                                    (immediately REJECTs — skips remaining rules)
+                                                </span>
+                                            </FormLabel>
                                         </FormItem>
                                     )}
                                 />

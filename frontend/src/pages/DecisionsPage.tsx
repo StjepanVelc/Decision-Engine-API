@@ -108,6 +108,8 @@ export default function DecisionsPage() {
                                 {selected.category && (
                                     <Badge variant="outline">{selected.category}</Badge>
                                 )}
+                                <Badge variant="secondary">Risk: {selected.risk_score}</Badge>
+                                <Badge variant="outline">{selected.normalized_score}%</Badge>
                             </div>
                             <Separator />
                             <div>
@@ -134,10 +136,13 @@ export default function DecisionsPage() {
                                             <li key={i} className="bg-muted rounded p-2 text-xs">
                                                 <span className="font-medium">{tr.rule_name}</span>{" "}
                                                 → {tr.action}
+                                                <span className="ml-2 text-muted-foreground">[weight: {tr.weight}]</span>
+                                                {tr.hard_stop && (
+                                                    <Badge variant="destructive" className="ml-2 text-[10px]">hard stop</Badge>
+                                                )}
                                                 <br />
                                                 <span className="text-muted-foreground">
-                                                    {tr.field} {tr.operator} {String(tr.value)} (got:{" "}
-                                                    {String(tr.actual_value)})
+                                                    {tr.match_detail}
                                                 </span>
                                             </li>
                                         ))}

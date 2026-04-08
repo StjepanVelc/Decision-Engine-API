@@ -27,6 +27,12 @@ class Decision(Base):
     # Number of rules evaluated
     rules_evaluated = Column(Integer, nullable=False, default=0)
 
+    # Accumulated risk score from all triggered rules
+    risk_score = Column(Integer, nullable=False, default=0)
+
+    # Normalized score: (risk_score / max_possible_score) * 100, or 0 if no active rules
+    normalized_score = Column(Integer, nullable=False, default=0)
+
     # Optional external reference (e.g. transaction ID, user ID)
     reference_id = Column(String(100), nullable=True, index=True)
 

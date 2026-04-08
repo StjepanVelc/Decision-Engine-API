@@ -25,7 +25,7 @@ class DecisionService:
     ) -> DecisionResponse:
         rules = await self.rule_repo.get_all_active(category=category)
 
-        outcome, triggered, reasons = evaluate_rules(request.payload, rules)
+        outcome, triggered, reasons, risk_score, normalized_score = evaluate_rules(request.payload, rules)
 
         record = Decision(
             payload=request.payload,
@@ -33,6 +33,8 @@ class DecisionService:
             triggered_rules=triggered,
             reasons=reasons,
             rules_evaluated=len(rules),
+            risk_score=risk_score,
+            normalized_score=normalized_score,
             reference_id=request.reference_id,
         )
         saved = await self.decision_repo.create(record)
@@ -43,6 +45,8 @@ class DecisionService:
             entity_id=str(saved.id),
             details={
                 "outcome": outcome,
+                "risk_score": risk_score,
+                "normalized_score": normalized_score,
                 "rules_evaluated": len(rules),
                 "triggered_count": len(triggered),
                 "reference_id": request.reference_id,
