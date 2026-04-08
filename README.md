@@ -2,7 +2,7 @@
 
 A **rule-based Decision Engine** REST API built with **FastAPI + PostgreSQL**, designed to evaluate arbitrary JSON payloads against configurable rules and return an audited `APPROVE / REVIEW / REJECT` decision.
 
-> Portfolio project demonstrating 3-layer architecture, async Python, domain-driven design, audit logging, and real-time statistics.
+> Portfolio project demonstrating 3-layer architecture, async Python, domain-driven design, audit logging, real-time statistics, and Docker containerization.
 
 ---
 
@@ -36,17 +36,41 @@ A **rule-based Decision Engine** REST API built with **FastAPI + PostgreSQL**, d
 - **Immutable audit log** – every create/update/delete on rules and every decision is written to a separate `audit_logs` table with event type, entity ID, and metadata
 - **Statistics endpoint** – real-time APPROVE / REVIEW / REJECT counts and success rate across all decisions
 - **Dot-notation field access** – evaluate nested JSON fields like `user.age`
+- **Docker ready** – multi-stage Dockerfile, Docker Compose with PostgreSQL, published image on Docker Hub
 
 ---
 
 ## Quick Start
 
-### 1. Prerequisites
+### Option A — Docker (recommended)
 
-- Python 3.12+
-- PostgreSQL running locally
+> No Python or PostgreSQL installation needed.
 
-### 2. Setup
+```bash
+git clone <repo>
+cd "Decision Engine API"
+
+# Copy and configure environment
+copy .env.example .env
+# Edit .env and set POSTGRES_PASSWORD
+
+docker compose up
+```
+
+Or pull directly from Docker Hub:
+
+```bash
+docker pull stipe35/decision-engine-api:latest
+docker compose up
+```
+
+API docs available at: **http://localhost:8000/docs**
+
+---
+
+### Option B — Local (Python + PostgreSQL)
+
+**Prerequisites:** Python 3.12+, PostgreSQL
 
 ```bash
 git clone <repo>
@@ -59,20 +83,17 @@ venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 ```
 
-### 3. Configure database
-
-Edit `.env`:
+Configure `.env`:
 ```
 DATABASE_URL=postgresql+asyncpg://postgres:yourpassword@localhost:5432/decision_engine
 ```
 
-Create the database in PostgreSQL:
+Create the database:
 ```sql
 CREATE DATABASE decision_engine;
 ```
 
-### 4. Run
-
+Run the server:
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -258,6 +279,41 @@ pytest tests/ -v
 
 ---
 
+## Docker
+
+### Image on Docker Hub
+
+```
+docker.io/stipe35/decision-engine-api:latest
+```
+
+### Build locally
+
+```bash
+docker build -t stipe35/decision-engine-api:latest .
+```
+
+### Run with Compose (API + PostgreSQL)
+
+```bash
+docker compose up          # foreground
+docker compose up -d       # background
+docker compose down        # stop and remove containers
+docker compose down -v     # also remove the database volume
+```
+
+### Environment variables (docker-compose.yml)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_PASSWORD` | `password` | PostgreSQL password |
+| `DATABASE_URL` | auto-set from `POSTGRES_PASSWORD` | Full connection string |
+| `DEBUG` | `false` | Enable SQLAlchemy query logging |
+
+Set `POSTGRES_PASSWORD` in your `.env` file (copied from `.env.example`).
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -268,3 +324,5 @@ pytest tests/ -v
 | Validation | Pydantic v2 |
 | Testing | pytest |
 | Server | Uvicorn |
+| Containerization | Docker + Docker Compose |
+| Image Registry | Docker Hub (`stipe35/decision-engine-api`) |
