@@ -12,6 +12,11 @@ Note: this endpoint is global (outside `/api/v1`).
 
 ## Rules
 
+Authentication for rule management endpoints:
+
+- `POST /rules/`, `PATCH /rules/{rule_id}`, and `DELETE /rules/{rule_id}` require header `X-API-Key`
+- Value must match server setting `RULES_ADMIN_API_KEY`
+
 ### POST /rules/
 Create a new rule.
 

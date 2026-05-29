@@ -39,6 +39,7 @@ python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 alembic upgrade head
+# set RULES_ADMIN_API_KEY in .env (default in template: dev-admin-key)
 uvicorn app.main:app --reload
 ```
 
@@ -62,6 +63,7 @@ Run these commands after the API is up on `http://localhost:8000`.
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/rules/ \
+	-H "X-API-Key: dev-admin-key" \
 	-H "Content-Type: application/json" \
 	-d "{\"name\":\"high_amount_demo\",\"field\":\"amount\",\"operator\":\"gt\",\"value\":10000,\"action\":\"REVIEW\",\"priority\":10,\"weight\":30,\"category\":\"fraud\"}"
 ```

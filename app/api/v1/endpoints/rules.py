@@ -1,10 +1,11 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.schemas.rule import RuleCreate, RuleResponse, RuleUpdate
 from app.services.rule_service import RuleService
@@ -12,8 +13,20 @@ from app.services.rule_service import RuleService
 router = APIRouter(prefix="/rules", tags=["Rules"])
 
 
+def require_rules_admin_key(x_api_key: Optional[str] = Header(default=None, alias="X-API-Key")) -> None:
+    if not x_api_key or x_api_key != settings.rules_admin_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key for rule management.",
+        )
+
+
 @router.post("/", response_model=RuleResponse, status_code=status.HTTP_201_CREATED)
-async def create_rule(data: RuleCreate, db: AsyncSession = Depends(get_db)):
+async def create_rule(
+    data: RuleCreate,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_rules_admin_key),
+):
     """Create a new decision rule."""
     service = RuleService(db)
     try:
@@ -47,7 +60,12 @@ async def get_rule(rule_id: UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.patch("/{rule_id}", response_model=RuleResponse)
-async def update_rule(rule_id: UUID, data: RuleUpdate, db: AsyncSession = Depends(get_db)):
+async def update_rule(
+    rule_id: UUID,
+    data: RuleUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_rules_admin_key),
+):
     """Partially update a rule."""
     service = RuleService(db)
     try:
@@ -63,7 +81,11 @@ async def update_rule(rule_id: UUID, data: RuleUpdate, db: AsyncSession = Depend
 
 
 @router.delete("/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_rule(rule_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_rule(
+    rule_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_rules_admin_key),
+):
     """Delete a rule by ID."""
     service = RuleService(db)
     deleted = await service.delete_rule(rule_id)

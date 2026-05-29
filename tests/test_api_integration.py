@@ -13,6 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import delete
 
 from app.core.database import AsyncSessionLocal, Base, engine
+from app.core.config import settings
 from app.main import app
 from app.models.audit_log import AuditLog
 from app.models.decision import Decision
@@ -50,6 +51,11 @@ async def client():
         yield api_client
 
 
+@pytest.fixture
+def admin_headers():
+    return {"X-API-Key": settings.rules_admin_api_key}
+
+
 @pytest.mark.asyncio
 async def test_health_endpoint(client: AsyncClient):
     response = await client.get("/health")
@@ -61,7 +67,7 @@ async def test_health_endpoint(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_create_rule_endpoint(client: AsyncClient):
+async def test_create_rule_endpoint(client: AsyncClient, admin_headers: dict[str, str]):
     payload = {
         "name": f"high_amount_{uuid.uuid4().hex[:8]}",
         "field": "amount",
@@ -74,7 +80,7 @@ async def test_create_rule_endpoint(client: AsyncClient):
         "category": "fraud",
     }
 
-    response = await client.post("/api/v1/rules/", json=payload)
+    response = await client.post("/api/v1/rules/", json=payload, headers=admin_headers)
     assert response.status_code == 201
 
     body = response.json()
@@ -86,7 +92,7 @@ async def test_create_rule_endpoint(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_evaluate_decision_endpoint(client: AsyncClient):
+async def test_evaluate_decision_endpoint(client: AsyncClient, admin_headers: dict[str, str]):
     rule_payload = {
         "name": f"reject_high_amount_{uuid.uuid4().hex[:8]}",
         "field": "amount",
@@ -98,7 +104,7 @@ async def test_evaluate_decision_endpoint(client: AsyncClient):
         "hard_stop": False,
         "category": "fraud",
     }
-    create_rule = await client.post("/api/v1/rules/", json=rule_payload)
+    create_rule = await client.post("/api/v1/rules/", json=rule_payload, headers=admin_headers)
     assert create_rule.status_code == 201
 
     evaluate_payload = {
@@ -122,7 +128,7 @@ async def test_evaluate_decision_endpoint(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_stats_endpoint(client: AsyncClient):
+async def test_stats_endpoint(client: AsyncClient, admin_headers: dict[str, str]):
     rule_payload = {
         "name": f"review_medium_amount_{uuid.uuid4().hex[:8]}",
         "field": "amount",
@@ -134,8 +140,24 @@ async def test_stats_endpoint(client: AsyncClient):
         "hard_stop": False,
         "category": "fraud",
     }
-    create_rule = await client.post("/api/v1/rules/", json=rule_payload)
+    create_rule = await client.post("/api/v1/rules/", json=rule_payload, headers=admin_headers)
     assert create_rule.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_create_rule_requires_api_key(client: AsyncClient):
+    payload = {
+        "name": f"unauthorized_rule_{uuid.uuid4().hex[:8]}",
+        "field": "amount",
+        "operator": "gt",
+        "value": 1000,
+        "action": "REVIEW",
+        "priority": 1,
+        "weight": 10,
+    }
+
+    response = await client.post("/api/v1/rules/", json=payload)
+    assert response.status_code == 401
 
     evaluate_payload = {
         "payload": {"amount": 7000},

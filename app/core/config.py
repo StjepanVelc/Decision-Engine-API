@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://postgres:password@localhost:5432/decision_engine"
     auto_create_schema: bool = False
+    rules_admin_api_key: str = "dev-admin-key"
 
     model_config = SettingsConfigDict(env_file=".env")
 
