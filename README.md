@@ -53,6 +53,32 @@ npm run dev
 docker compose up --build
 ```
 
+## Try It In 60 Seconds
+
+Run these commands after the API is up on `http://localhost:8000`.
+
+### 1) Create a demo rule
+
+```bash
+curl -X POST http://localhost:8000/api/v1/rules/ \
+	-H "Content-Type: application/json" \
+	-d "{\"name\":\"high_amount_demo\",\"field\":\"amount\",\"operator\":\"gt\",\"value\":10000,\"action\":\"REVIEW\",\"priority\":10,\"weight\":30,\"category\":\"fraud\"}"
+```
+
+### 2) Evaluate a payload
+
+```bash
+curl -X POST http://localhost:8000/api/v1/decisions/evaluate \
+	-H "Content-Type: application/json" \
+	-d "{\"payload\":{\"amount\":15000,\"country\":\"NG\"},\"reference_id\":\"demo-1\",\"category\":\"fraud\"}"
+```
+
+### 3) Check health
+
+```bash
+curl http://localhost:8000/health
+```
+
 ## Project Docs
 
 Detailed documentation is maintained in [docs/INDEX.md](docs/INDEX.md).

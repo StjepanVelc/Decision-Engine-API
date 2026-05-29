@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -55,7 +54,7 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     details = []
     for error in exc.errors():
         loc = error.get("loc", [])
-        field = ".".join(str(l) for l in loc if l != "body") or None
+        field = ".".join(str(item) for item in loc if item != "body") or None
         details.append({"field": field, "message": error.get("msg", "Validation error")})
 
     return JSONResponse(

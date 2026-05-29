@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Any, List, Optional
+from typing import List, Optional
 
 
 class ErrorDetail(BaseModel):
