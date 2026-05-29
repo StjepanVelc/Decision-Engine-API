@@ -1,205 +1,77 @@
 # Decision Engine API
 
-A **rule-based decision engine** built with **FastAPI + React** for evaluating arbitrary JSON payloads against configurable business rules and returning an audited `APPROVE / REVIEW / REJECT` outcome.
+![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111111)
+![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-> A portfolio project showcasing layered backend architecture, asynchronous Python, domain-oriented design, weighted risk scoring, hard-stop rules, normalized scoring, a safe DSL expression evaluator, immutable audit logging, real-time statistics, and a React + shadcn/ui dashboard — all containerized and served from a single deployment unit.
+A rule-based decision platform built with FastAPI, PostgreSQL, and React for evaluating arbitrary JSON payloads and returning auditable APPROVE, REVIEW, or REJECT outcomes.
 
----
+## Architecture Visuals
 
-## Overview
+### System Architecture
 
-The Decision Engine API models dynamic decision-making systems where rules can be modified without redeploying code.
+![Decision Engine API - Layered Architecture](Images/Arhitectura.png)
 
-Typical use cases include:
+### Backend Architecture and Flow
 
-* fraud detection
-* compliance validation
-* pricing decisions
-* internal policy enforcement
+![Decision Engine API - Backend Architecture](Images/Backend.png)
 
-The system supports both structured rules and expression-based DSL rules, while ensuring full auditability of every decision.
+## Highlights
 
----
+- Layered backend architecture (API, Service, Repository, Data)
+- Configurable rules with DSL and legacy field/operator/value support
+- Hard-stop rule handling with weighted risk scoring and normalized score
+- Immutable audit logging for rule changes and decision evaluations
+- Async stack: FastAPI + SQLAlchemy async + asyncpg
+- React dashboard for rules, decisions, and payload evaluation
+- Dockerized deployment with PostgreSQL via Compose
 
-## Architecture
+## Quick Start
 
-```
-┌─────────────────────────────────────────┐
-│  Frontend (React + shadcn/ui)           │
-├─────────────────────────────────────────┤
-│  API Layer (FastAPI)                    │
-├─────────────────────────────────────────┤
-│  Service Layer (Decision Engine)        │
-├─────────────────────────────────────────┤
-│  Repository Layer (PostgreSQL)          │
-└─────────────────────────────────────────┘
-```
+### Local Development
 
----
-
-## Core Features
-
-* Configurable rules via API (no redeploy required)
-* DSL expressions (`amount > 10000 and country in ['NG']`)
-* Legacy rule support (field/operator/value)
-* Safe AST-based expression evaluator (no eval)
-* Risk scoring system (weighted rules)
-* Normalized score (0–100%)
-* Hard-stop rules (instant REJECT)
-* Threshold-based decisions
-* Category-based rule filtering
-* Immutable audit logging
-* Full decision traceability
-* React dashboard (rules + evaluation + stats)
-* Dockerized full-stack deployment
-
----
-
-## Decision Flow
-
-1. Load active rules (sorted by priority)
-2. Evaluate rules (DSL or legacy mode)
-3. If hard-stop rule matches → immediate REJECT
-4. Otherwise accumulate `risk_score`
-5. Apply thresholds to determine outcome
-6. Store decision + audit log
-
----
-
-## Risk Scoring
-
-Each rule has a `weight`.
-
-```
-risk_score = sum(weight of matched rules)
+```bash
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
-### Thresholds
-
-| Score | Outcome |
-| ----- | ------- |
-| ≥ 80  | REJECT  |
-| ≥ 50  | REVIEW  |
-| < 50  | APPROVE |
-
----
-
-### Normalized Score
-
-```
-normalized_score = round(risk_score / max_possible_score * 100)
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-Represents relative risk (0–100%).
+### Docker
 
----
-
-### Hard-stop Rules
-
-Rules with `hard_stop = true` immediately return:
-
-```
-REJECT
+```bash
+docker compose up --build
 ```
 
-without evaluating further rules.
+## Project Docs
 
----
+Detailed documentation is maintained in [docs/INDEX.md](docs/INDEX.md).
 
-## DSL Expression Rules
+- Setup and run guide: [docs/01-quick-start.md](docs/01-quick-start.md)
+- Architecture notes: [docs/02-architecture.md](docs/02-architecture.md)
+- Backend internals: [docs/03-backend.md](docs/03-backend.md)
+- Rules engine logic: [docs/04-rules-engine.md](docs/04-rules-engine.md)
+- API reference: [docs/05-api-reference.md](docs/05-api-reference.md)
+- Frontend: [docs/06-frontend.md](docs/06-frontend.md)
+- Database and migrations: [docs/07-database-and-migrations.md](docs/07-database-and-migrations.md)
+- Docker and deployment: [docs/08-docker-and-deployment.md](docs/08-docker-and-deployment.md)
+- Troubleshooting: [docs/09-troubleshooting.md](docs/09-troubleshooting.md)
 
-Examples:
+## Repository Structure
 
+```text
+app/          FastAPI backend (API, services, repositories, models)
+frontend/     React + Vite dashboard
+docs/         Technical documentation
+migrations/   SQL migration scripts
 ```
-amount > 10000
-country in ['NG', 'KP']
-user.age < 18
-amount > 5000 and verified == False
-```
-
-### Supported
-
-* comparisons: >, <, >=, <=, ==, !=
-* logical: and, or, not
-* membership: in, not in
-* dot notation: user.age
-* arithmetic expressions
-
-### Safety
-
-* AST-based parser
-* strict whitelist
-* no eval / exec
-* no imports or function calls
-
----
-
-## Example
-
-### Input
-
-```json
-{
-  "amount": 15000,
-  "country": "NG"
-}
-```
-
-### Output
-
-```json
-{
-  "outcome": "REJECT",
-  "risk_score": 85,
-  "normalized_score": 85
-}
-```
-
----
-
-## API
-
-### Rules
-
-* POST `/rules/`
-* GET `/rules/`
-* PATCH `/rules/{id}`
-* DELETE `/rules/{id}`
-
-### Decisions
-
-* POST `/decisions/evaluate`
-* GET `/decisions/`
-
-### Stats
-
-* GET `/stats/`
-
----
-
-## Audit Log
-
-Every action is recorded:
-
-* rule created / updated / deleted
-* decision evaluated
-
-Stored with metadata and timestamps.
-
----
-
-## Tech Stack
-
-* FastAPI
-* SQLAlchemy (async)
-* PostgreSQL
-* React + TypeScript
-* Tailwind + shadcn/ui
-* TanStack Query
-* Docker
-
----
-
-## Summary
-
-This project demonstrates how to design a **configurable, auditable decision system** that separates business logic from code and supports real-world use cases such as fraud detection and compliance evaluation.
