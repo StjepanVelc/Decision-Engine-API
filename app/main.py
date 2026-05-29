@@ -1,4 +1,3 @@
-from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, status
@@ -8,17 +7,6 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.api.v1.router import router
 from app.core.config import settings
-from app.core.database import Base, engine
-import app.models.rule  # noqa: F401
-import app.models.decision  # noqa: F401
-import app.models.audit_log  # noqa: F401
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
 
 
 app = FastAPI(
@@ -29,7 +17,6 @@ app = FastAPI(
         "Define rules once via the Rules API, then evaluate any JSON payload "
         "to get an APPROVE / REVIEW / REJECT decision with full audit trail."
     ),
-    lifespan=lifespan,
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────

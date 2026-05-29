@@ -41,8 +41,29 @@ Primary tables:
 
 ## Migrations in Repository
 
+Primary migration system:
+
+- `alembic/` (official migration workflow)
+- `alembic/versions/0001_initial_schema.py`
+
+Legacy SQL migration scripts (kept for historical reference):
+
 - `migrations/001_add_risk_scoring_and_expression.sql`
 - `migrations/002_add_hard_stop_and_normalized_score.sql`
+
+## Applying Migrations (Primary: Alembic)
+
+```bash
+alembic upgrade head
+```
+
+For existing environments that were created before Alembic integration:
+
+```bash
+alembic stamp head
+```
+
+Use `stamp` only when schema already matches the latest migration.
 
 ## Applying Migrations (Local PostgreSQL)
 

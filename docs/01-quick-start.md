@@ -44,6 +44,7 @@ POSTGRES_PASSWORD=yourpassword
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
+alembic upgrade head
 ```
 
 Create database once:
