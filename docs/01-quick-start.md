@@ -34,6 +34,8 @@ APP_NAME=Decision Engine API
 DEBUG=false
 DATABASE_URL=postgresql+asyncpg://postgres:yourpassword@localhost:5432/decision_engine
 POSTGRES_PASSWORD=yourpassword
+RULES_ADMIN_API_KEY=change-me
+AUTO_CREATE_SCHEMA=false
 ```
 
 ## Run Locally
@@ -45,6 +47,12 @@ python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 alembic upgrade head
+```
+
+Optional: seed demo rules
+
+```bash
+python scripts/seed_demo_data.py
 ```
 
 Create database once:
@@ -108,6 +116,7 @@ Create one rule and evaluate one payload.
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/rules/ \
+  -H "X-API-Key: change-me" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"high_amount\",\"field\":\"amount\",\"operator\":\"gt\",\"value\":10000,\"action\":\"REVIEW\",\"priority\":10,\"weight\":30}"
 ```

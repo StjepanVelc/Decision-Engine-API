@@ -4,11 +4,13 @@ Run: pytest tests/ -v
 """
 import uuid
 from types import SimpleNamespace
+from typing import cast
 
+from app.models.rule import Rule
 from app.services.rules_engine import evaluate_rules
 
 
-def make_rule(**kwargs) -> SimpleNamespace:
+def make_rule(**kwargs) -> Rule:
     defaults = {
         "id": uuid.uuid4(),
         "name": "test_rule",
@@ -25,7 +27,7 @@ def make_rule(**kwargs) -> SimpleNamespace:
         "category": "fraud",
     }
     defaults.update(kwargs)
-    return SimpleNamespace(**defaults)
+    return cast(Rule, SimpleNamespace(**defaults))
 
 
 class TestOperators:

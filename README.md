@@ -1,5 +1,6 @@
 # Decision Engine API
 
+![CI](https://github.com/StjepanVelc/Decision-Engine-API/actions/workflows/ci.yml/badge.svg?branch=master)
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111111)
@@ -20,6 +21,10 @@ A rule-based decision platform built with FastAPI, PostgreSQL, and React for eva
 
 ![Decision Engine API - Backend Architecture](Images/Backend.png)
 
+### Frontend UI
+
+![Decision Engine API - Frontend UI](Images/Fronted.png)
+
 ## Highlights
 
 - Layered backend architecture (API, Service, Repository, Data)
@@ -39,8 +44,14 @@ python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 alembic upgrade head
-# set RULES_ADMIN_API_KEY in .env (default in template: dev-admin-key)
+# set RULES_ADMIN_API_KEY in .env (example: change-me)
 uvicorn app.main:app --reload
+```
+
+Optional: seed demo rules
+
+```bash
+python scripts/seed_demo_data.py
 ```
 
 ```bash
@@ -63,7 +74,7 @@ Run these commands after the API is up on `http://localhost:8000`.
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/rules/ \
-	-H "X-API-Key: dev-admin-key" \
+	-H "X-API-Key: change-me" \
 	-H "Content-Type: application/json" \
 	-d "{\"name\":\"high_amount_demo\",\"field\":\"amount\",\"operator\":\"gt\",\"value\":10000,\"action\":\"REVIEW\",\"priority\":10,\"weight\":30,\"category\":\"fraud\"}"
 ```

@@ -35,7 +35,7 @@ What happens on startup:
 - FastAPI app is initialized
 - CORS middleware is enabled for local frontend origins
 - API router is mounted under `/api/v1`
-- DB metadata is created on lifespan startup (`Base.metadata.create_all`)
+- Database schema is expected to be managed via Alembic migrations (`alembic upgrade head`)
 - Health endpoint is exposed at `/health`
 - If `frontend/dist` exists, SPA files are served by FastAPI
 
@@ -95,6 +95,14 @@ Global handlers in `app/main.py`:
 
 - Validation errors (`422`) are returned in a frontend-friendly shape
 - Unhandled exceptions (`500`) return a safe generic message
+
+## Observability
+
+- Structured logging format is configured in `app/core/observability.py`
+- Request-level correlation is handled by `request_id` middleware in `app/main.py`
+- Every HTTP response includes `X-Request-ID`
+- Decision evaluation flow logs start/completion events with outcome and score metadata
+- Business audit history remains stored in `audit_logs` (separate from technical logs)
 
 ## Testing
 

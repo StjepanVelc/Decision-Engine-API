@@ -1,4 +1,7 @@
 from pathlib import Path
+import logging
+import time
+from uuid import uuid4
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -7,6 +10,10 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.api.v1.router import router
 from app.core.config import settings
+from app.core.observability import configure_logging, reset_request_id, set_request_id
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(
@@ -31,6 +38,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_context_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or str(uuid4())
+    request.state.request_id = request_id
+
+    token = set_request_id(request_id)
+    started_at = time.perf_counter()
+    try:
+        response = await call_next(request)
+    finally:
+        elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        logger.info(
+            "request_completed method=%s path=%s duration_ms=%s",
+            request.method,
+            request.url.path,
+            elapsed_ms,
+        )
+        reset_request_id(token)
+
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 
 # ── Global error handlers ─────────────────────────────────────────────────────

@@ -156,3 +156,8 @@ For unexpected server errors:
   "details": null
 }
 ```
+
+## Response Headers
+
+- `X-Request-ID` is returned on every response.
+- Use this value to correlate client calls with backend structured logs.

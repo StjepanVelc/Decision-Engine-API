@@ -1,20 +1,24 @@
 from typing import List
 from uuid import UUID
+import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.observability import get_request_id
 from app.schemas.decision import DecisionRequest, DecisionResponse
 from app.services.decision_service import DecisionService
 from app.repositories.decision_repository import DecisionRepository
 
 router = APIRouter(prefix="/decisions", tags=["Decisions"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/evaluate", response_model=DecisionResponse, status_code=status.HTTP_201_CREATED)
 async def evaluate_decision(
-    request: DecisionRequest,
+    decision_request: DecisionRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -24,8 +28,28 @@ async def evaluate_decision(
     - **REVIEW**  – at least one REVIEW rule triggered, no REJECT rules
     - **REJECT**  – at least one REJECT rule triggered
     """
+    logger.info(
+        "decision_evaluation_started category=%s reference_id=%s",
+        decision_request.category,
+        decision_request.reference_id,
+    )
+
     service = DecisionService(db)
-    return await service.evaluate(request, category=request.category)
+    result = await service.evaluate(decision_request, category=decision_request.category)
+
+    request_id = getattr(request.state, "request_id", get_request_id())
+    logger.info(
+        "decision_evaluation_completed decision_id=%s outcome=%s risk_score=%s normalized_score=%s triggered_count=%s reference_id=%s request_id=%s",
+        result.id,
+        result.outcome,
+        result.risk_score,
+        result.normalized_score,
+        len(result.triggered_rules),
+        result.reference_id,
+        request_id,
+    )
+
+    return result
 
 
 @router.get("/", response_model=List[DecisionResponse])
